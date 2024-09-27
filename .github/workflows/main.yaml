@@ -31,7 +31,7 @@ jobs:
     - name: Run tests
       id: tests
       run: |
-        npm test -- --json --outputFile=test-results/test-results.json
+        npm test
       continue-on-error: true
 
     - name: Attach Test Results to JIRA
