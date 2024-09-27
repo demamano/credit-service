@@ -41,7 +41,7 @@ const jira = new JiraClient({
 (async () => {
   try {
     // Path to test results
-    const testResultsPath = path.resolve('test-results', 'test-results.json');
+    const testResultsPath = path.resolve('test-results', 'test-report.json');
 
     if (!fs.existsSync(testResultsPath)) {
       console.error('Test results file not found.');
