@@ -1,0 +1,71 @@
+{
+    "name": "kcredit",
+    "version": "0.0.1",
+    "description": "From Purpose Black for Broke ass People.",
+    "main": "src/server.ts",
+    "prisma": {
+        "schema": "prisma/schema.prisma"
+    },
+    "scripts": {
+        "test": "jest --json --outputFile=test-results/test-report.json",
+        "update-jira": "npm run build && node dist/scripts/update-jira.js",
+        "attach-test-results": "npm run build && node dist/scripts/attach-test-results.js",
+        "build": "tsc",
+        "lint": "eslint src/",
+        "lint:fix": "npm run lint --fix",
+        "prisma:studio": "npx prisma studio",
+        "prisma:generate": "npx prisma generate",
+        "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+        "start": "node build/server.js",
+        "format": "prettier --write \"src/**/*.ts\""
+    },
+    "keywords": [
+        "credit"
+    ],
+    "author": "kts",
+    "license": "ISC",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/kateyohannes/kcredit.git"
+    },
+    "devDependencies": {
+        "@babel/preset-typescript": "^7.24.7",
+        "@eslint/js": "^9.6.0",
+        "@types/cors": "^2.8.17",
+        "@types/express": "^4.17.21",
+        "@types/helmet": "^4.0.0",
+        "@types/http-status-codes": "^1.2.0",
+        "@types/jest": "^29.5.12",
+        "@types/jira-client": "^7.1.9",
+        "@types/jsonwebtoken": "^9.0.6",
+        "@types/node": "^20.14.9",
+        "@types/supertest": "^6.0.2",
+        "@types/winston": "^2.4.4",
+        "eslint": "^9.11.1",
+        "eslint-config-prettier": "^9.1.0",
+        "eslint-plugin-jest": "^28.6.0",
+        "eslint-plugin-prettier": "^5.1.3",
+        "globals": "^15.8.0",
+        "prettier": "^3.3.2",
+        "prisma": "^5.16.2",
+        "supertest": "^6.3.4",
+        "ts-jest": "^29.1.5",
+        "ts-node-dev": "^2.0.0",
+        "typescript": "^5.5.2",
+        "typescript-eslint": "^8.7.0"
+    },
+    "dependencies": {
+        "@prisma/client": "^5.16.2",
+        "cors": "^2.8.5",
+        "express": "^4.19.2",
+        "fast-csv": "^5.0.1",
+        "helmet": "^7.1.0",
+        "http-status-codes": "^2.3.0",
+        "jest": "^29.7.0",
+        "jira-client": "^8.2.2",
+        "json-2-csv": "^5.5.5",
+        "jsonwebtoken": "^9.0.2",
+        "winston": "^3.13.0",
+        "zod": "^3.23.8"
+    }
+}

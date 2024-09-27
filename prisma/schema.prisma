@@ -1,0 +1,467 @@
+generator client {
+    provider = "prisma-client-js"
+    // previewFeatures = ["prismaSchemaFolder"]
+}
+
+datasource db {
+    provider = "sqlite"
+    url      = "file:./dev.db"
+}
+
+// ---------------------------------------------------------------------
+
+model User {
+    id            Int     @id @default(autoincrement())
+    username      String?
+    email         String? @unique
+    emailVerified Boolean @default(false)
+
+    phone         String  @unique
+    phoneVerified Boolean @default(false)
+
+    currentPassword String
+    oldPassword     String?
+    salt            String
+
+    profile Profile?
+
+    credits       Credit[]
+    payments      Payment[]
+    request       ServiceRequest[]
+    workingBranch GuarantorBranchEmployee[]
+
+    creditLimit     Decimal @default(0.0)
+    remainignCredit Decimal @default(0.0)
+    totalCredit     Decimal @default(0.0)
+
+    session UserSession[]
+
+    isActive Boolean @default(true)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([phone])
+}
+
+model UserSession {
+    id        Int    @id @default(autoincrement())
+    sessionId String @unique
+
+    deviceIp              String
+    deviceMac             String
+    devicePlatform        String
+    devicePlatformVersion String
+    userAgent             String?
+
+    user   User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    userId Int
+
+    lastSeen         DateTime
+    sessionCreatedAt DateTime @default(now())
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([sessionId])
+}
+
+model Profile {
+    id        Int       @id @default(autoincrement())
+    firstName String
+    lastName  String
+    gender    String
+    dob       DateTime?
+
+    user   User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    userId Int  @unique
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+//---------------------------------------------------------------------------------------------
+
+model Notification {
+    id Int @id @default(autoincrement())
+
+    about   String? // Rejected, Accepted
+    message String
+
+    kstaff    KStaff  @relation(fields: [kstaffId], references: [id])
+    kstaffId  Int
+    company   Company @relation(fields: [companyId], references: [id])
+    companyId Int
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------------------------------------
+
+model Company {
+    id          Int    @id @default(autoincrement())
+    name        String
+    companyType String
+    tinNumber   String @unique
+
+    autoCreditLimitInPercent Decimal @default(0.3)
+    logo Bytes?
+
+    address CompanyAddress?
+
+    provider   Provider?
+    isProvider Boolean   @default(false)
+
+    branchs     GuarantorBranch[]
+    isGuarantor Boolean           @default(false)
+
+    documents     Documents[]
+    staffs        CompanyStaff[]
+    notifications Notification[]
+
+    isApproved Boolean @default(false)
+    isActive   Boolean @default(true)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([tinNumber])
+}
+
+model CompanyAddress {
+    id       Int    @id @default(autoincrement())
+    region   String
+    zone     String
+    district String
+    kebele   String
+
+    company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    companyId Int     @unique
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model CompanyStaff {
+    id Int @id @default(autoincrement())
+
+    username      String?
+    email         String  @unique
+    emailVerified Boolean @default(false)
+
+    code          String  @default("251")
+    phone         String  @unique
+    phoneVerified Boolean @default(false)
+
+    currentPassword String
+    oldPassword     String?
+    salt            String
+
+    employeeId String?
+    allocatedBranch     ProviderBranchStaff?
+
+    company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    companyId Int
+    role      Role    @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    roleId    Int
+
+    userType String @default("staff") // owner
+
+    responds ServiceRespond[]
+    credits  Credit[]
+    isActive Boolean          @default(true)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------------
+
+model GuarantorBranch {
+    id Int @id @default(autoincrement())
+
+    branchName     String
+    branchRegion   String
+    branchZone     String
+    branchDistrict String
+    branchKebele   String
+    company   Company                   @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    companyId Int
+    
+    employees GuarantorBranchEmployee[]
+}
+
+
+model GuarantorBranchEmployee {
+    id Int @id @default(autoincrement())
+
+    employeeId  String    @unique
+    hiringDate  DateTime?
+    salary      Decimal
+    creditLimit Decimal?
+
+    user     User            @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    userId   Int
+    branch   GuarantorBranch @relation(fields: [branchId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    branchId Int
+
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([employeeId])
+}
+
+// ----------------------------------------------------------------
+
+model Documents {
+    id     Int    @id @default(autoincrement())
+    become String
+
+    documentType            String
+    documentUrl             String
+    documentReferenceNumber String?
+    documentDescription     String?
+
+    isApproved    Boolean                @default(false)
+    notifications DocumentNotification[]
+
+    company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    companyId Int
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model DocumentNotification {
+    id         Int       @id @default(autoincrement())
+    document   Documents @relation(fields: [documentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    documentId Int
+
+    about   String
+    message String
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+
+model Provider {
+    id                       Int      @id @default(autoincrement())
+    company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    companyId Int     @unique
+
+    services  Service @relation(fields: [serviceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    serviceId Int
+
+    serviceDescription String?
+
+    isApproved Boolean @default(false)
+    isActive   Boolean @default(true)
+
+    credits  Credit[]
+    request  ServiceRequest[]
+    branchs  ProviderBranch[]
+    payments Payment[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model ProviderBranch {
+    id Int @id @default(autoincrement())
+
+    branchName     String
+    branchRegion   String
+    branchZone     String
+    branchDistrict String
+    branchKebele   String
+
+    credits Credit[]
+    staffs  ProviderBranchStaff[]
+
+    provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    providerId Int
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([providerId, branchName])
+}
+
+model ProviderBranchStaff {
+    id Int @id @default(autoincrement())
+
+    staff    CompanyStaff   @relation(fields: [staffId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    staffId  Int @unique
+    branch   ProviderBranch @relation(fields: [branchId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    branchId Int
+
+    isActive  Boolean  @default(false)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+// ----------------------------------------------------------------
+
+model ServiceRequest {
+    id Int @id @default(autoincrement())
+
+    message    String?
+    provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    providerId Int
+    user       User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    userId     Int
+
+    requestedCredit Decimal
+    response        ServiceRespond?
+    createdAt       DateTime        @default(now())
+    updatedAt       DateTime        @updatedAt
+}
+
+model ServiceRespond {
+    id Int @id @default(autoincrement())
+
+    request   ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    requestId Int            @unique
+
+    respondent CompanyStaff @relation(fields: [respondBy], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    respondBy  Int
+
+    allowedCredit Decimal @default(0.0)
+    respondStat   Boolean
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+// ------------------------------------------------------------------
+model Credit {
+    id Int @id @default(autoincrement())
+
+    amount           Decimal
+    serviceCharge    Decimal
+    totalCredit      Decimal
+    remainingCredit  Decimal
+    currency         String  @default("Etb")
+    paymentCondition String?
+    note             String?
+
+    reference String? @unique
+
+    provider   Provider       @relation(fields: [providerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    providerId Int
+    branch     ProviderBranch @relation(fields: [branchId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    branchId   Int
+
+    user    User         @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    userId  Int
+    staff   CompanyStaff @relation(fields: [staffId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    staffId Int
+
+    payments Payment[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model Payment {
+    id Int @id @default(autoincrement())
+
+    note                 String?
+    paymentMethod        String
+    transactionReference String
+
+    amount   Decimal
+    currency String  @default("Etb")
+
+    status String
+
+    user       User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    userId     Int
+    provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    providerId Int
+    credit     Credit   @relation(fields: [creditId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    creditId   Int
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([transactionReference])
+}
+
+// ---------------------------------------------------------------------
+
+model KStaff {
+    id            Int     @id @default(autoincrement())
+    username      String?
+    email         String  @unique
+    emailVerified Boolean @default(false)
+
+    phone         String  @unique
+    phoneVerified Boolean @default(false)
+
+    password String
+    salt     String
+
+    salary     Decimal
+    employeeId String? @unique
+
+    remainingCredit Decimal?
+
+    profile       KStaffProfile?
+    notifications Notification[]
+
+    isActive  Boolean  @default(true)
+    firstTime Boolean  @default(true)
+    createdAt DateTime @default(now())
+
+    @@index([employeeId, username])
+}
+
+model KStaffProfile {
+    id Int @id @default(autoincrement())
+
+    firstName String
+    lastName  String
+    gender    String?
+    dob       DateTime?
+
+    staff   KStaff @relation(fields: [staffId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    staffId Int    @unique
+}
+
+// -------------------------------------------------------------------------------------
+
+model Role {
+    id            Int              @id @default(autoincrement())
+    name          String
+    permissions   RolePermission[]
+    providerStaff CompanyStaff[]
+}
+
+model Permission {
+    id    Int              @id @default(autoincrement())
+    name  String
+    roles RolePermission[]
+}
+
+model RolePermission {
+    role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    roleId       Int
+    permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    permissionId Int
+
+    @@id([roleId, permissionId])
+}
+
+model Service {
+    id                 Int        @id @default(autoincrement())
+    name               String
+    serviceDescription String?
+    providers          Provider[]
+}
+
+// --------------------------------------------------

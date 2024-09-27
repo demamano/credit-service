@@ -1,0 +1,95 @@
+name: CI/CD Pipeline for k-bidir
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16' # Adjust to your project's Node.js version
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build project
+      run: npm run build
+
+    - name: Create test results directory
+      run: mkdir -p test-results
+
+    - name: Run tests
+      id: tests
+      run: |
+        npm test -- --json --outputFile=test-results/test-results.json
+      continue-on-error: true
+
+    - name: Attach Test Results to JIRA
+      run: npm run attach-test-results
+      env:
+        JIRA_HOST: ${{ secrets.JIRA_HOST }}
+        JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+        JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        GIT_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        TEST_OUTCOME: ${{ steps.tests.outcome }}
+
+    - name: Update JIRA Issue Status on Success
+      if: steps.tests.outcome == 'success'
+      run: npm run update-jira
+      env:
+        JIRA_HOST: ${{ secrets.JIRA_HOST }}
+        JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+        JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        GIT_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+
+    - name: Fail the job if tests failed
+      if: steps.tests.outcome == 'failure'
+      run: exit 1
+
+  build-and-push:
+    needs: build-and-test
+    if: needs.build-and-test.result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Log in to Docker Hub
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: alegnta/k-bdir-backend:latest
+
+  deploy:
+    needs: build-and-push
+    if: needs.build-and-push.result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Trigger Render Deployment
+      env:
+        RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      run: |
+        curl -X POST \
+          -H "Accept: application/json" \
+          -H "Authorization: Bearer $RENDER_API_KEY" \
+          "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys"
